@@ -45,9 +45,23 @@ npm test
 npm run build
 ```
 
-## How the graph works
+## Current application state
 
-The app renders a directed dependency graph using @xyflow/react. Nodes represent systems and conditions. Edges represent influence relationships. Each edge carries a polarity, a curve, a ratio, a communication medium, and a delay.
+The current screen is designed for a single desktop viewport:
+
+- A compact header contains profile focus, scenario, stress, step count, and simulation controls.
+- The Indian source ecosystem and Hellenistic transplant appear side by side as layered dependency pyramids.
+- Each profile header shows only System robustness and Breakdown pressure; Battlefield effect is shown once, as the outcome node at the pyramid summit.
+- Each node shows its live simulated value, accumulated boundary pressure, and a value meter.
+- `Run` advances both profiles at the same cadence. `Step` advances exactly one discrete simulation step. `Reset` restores the seed model.
+- Selecting a node opens a modal editor above the comparison. Changes remain a draft until `Save changes`; `Cancel`, the close control, and clicking the backdrop discard the draft.
+- Saved profile values and model definitions persist locally through browser `localStorage`. `Export` downloads the persistent model data as JSON.
+
+The current UI intentionally does not expose free-form relation creation yet. Existing relationships remain part of the model engine and will be surfaced through the next connection-editor iteration.
+
+## How the dependency model works
+
+Nodes represent systems and conditions. Relations represent influence pathways. The UI renders node dependencies as a layered pyramid rather than a freeform graph, keeping both historical profiles immediately comparable.
 
 The graph is deliberately structured in a layered pyramid:
 
@@ -134,6 +148,21 @@ The app ships with two provisional profiles:
 
 Both are deliberately editable. The initial values are illustrative hypotheses rather than settled historical facts.
 
+## Repository workflow
+
+- `main` is the stable base branch.
+- Active development takes place on `dev`.
+- Open a pull request from `dev` to `main` in GitHub when a reviewed milestone is ready to merge.
+
+## Suggestions for the next iteration
+
+1. Add an explicit relation editor to the modal: list incoming and outgoing relations, then support adding or removing a connection with validation against duplicate edges.
+2. Make relation delay operational in the simulation queue; the model schema already has `delaySteps`, while the current UI-focused simulation uses immediate step propagation.
+3. Add a scenario timeline or event log so users can explain why a node reached its pressure threshold.
+4. Add source and evidence editing, with citations visible at node and relation level.
+5. Add focused UI tests for the draft editor: save, cancel, local persistence, and reset behavior.
+6. Add an import action with schema validation to complement the existing JSON export.
+
 ## How to add evidence and sources
 
 Each node and relationship has a sources array. It is intentionally easy to add citations, notes, or provenance later. Seed arrays are kept minimal and can be expanded with historical works or modern scholarship.
@@ -145,6 +174,7 @@ Each node and relationship has a sources array. It is intentionally easy to add 
 - The graph simplifies highly complex political, ecological, and military systems.
 - The seed data is intentionally provisional and editable.
 - Relationship strength and evidence confidence are illustrative rather than academically exhaustive.
+- Free-form node wiring and relation editing are planned but are not exposed in the current interface.
 
 ## Future research questions
 
