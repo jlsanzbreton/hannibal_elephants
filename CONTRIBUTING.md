@@ -27,3 +27,5 @@ When submitting changes, explain:
 - the new or changed behavior
 - the verification command run
 - any limitations or remaining uncertainty
+
+This repository uses `dev` for active development and `main` as the stable base. Open pull requests from `dev` to `main` after tests and the production build pass.

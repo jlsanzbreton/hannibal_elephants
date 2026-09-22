@@ -11,16 +11,18 @@ The application separates model logic from presentation. The engine computes det
 3. App state creates an independent live node set for each profile, initialized from its profile values.
 4. The comparison renders each live node set in the same layered pyramid.
 5. `Step` and `Run` advance both live node sets under the selected scenario and stress intensity.
-6. A node editor operates on a local draft. Only `Save changes` writes the result to the selected profile and persistent model state.
-7. Results are fed back into the UI and the persistent model can be exported as JSON.
+6. A node editor operates on local node and relation drafts. `Dependencies` expands the modal to expose incoming/outgoing relations and relation editing.
+7. `Save changes` validates and writes the node draft, relation drafts, and selected-profile starting value to persistent model state. Cancel paths discard all drafts.
+8. Results are fed back into the UI and the persistent model can be exported as JSON.
 
 ## Key files
 
 - src/model/types.ts — shared model types and interfaces
 - src/model/engine.ts — deterministic engine logic and seed data
 - src/model/engine.test.ts — model behavior tests
-- src/App.tsx — profile simulations, comparison pyramids, simulation controls, and draft modal editor
-- src/App.css — compact documentary comparison layout and modal styling
+- src/App.tsx — profile simulations, comparison pyramids, simulation controls, draft modal editor, and relationship validation
+- src/App.css — full-width documentary comparison layout, modal styling, dependency editor, and contextual help
+- src/index.css — global browser shell; `#root` deliberately takes the full viewport width
 - src/data/seedModel.ts — seed data exports
 
 ## Model conventions
@@ -33,6 +35,8 @@ The application separates model logic from presentation. The engine computes det
 - Each profile simulation is isolated, so running a scenario updates both profiles without mutating one profile through the other.
 - The Battlefield effect node is synchronized with the aggregate robustness calculation so the pyramid outcome and headline model calculation agree.
 - Node editing uses a draft-and-save boundary to avoid accidental persistent mutations while a user is exploring assumptions.
+- Relationship editing uses the same draft boundary. Relation validation rejects invalid endpoints, self-links, duplicate directed pairs, non-positive ratios, and non-integer or negative delays.
+- The pyramid is a stable visual hierarchy; it is not a dynamically laid-out relationship graph.
 
 ## Why this structure
 

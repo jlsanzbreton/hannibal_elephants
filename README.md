@@ -47,17 +47,45 @@ npm run build
 
 ## Current application state
 
-The current screen is designed for a single desktop viewport:
+The current screen is designed to use the full desktop viewport without structural scroll:
 
+- The application shell expands to the full browser width; comparison panels share the available desktop space.
 - A compact header contains profile focus, scenario, stress, step count, and simulation controls.
 - The Indian source ecosystem and Hellenistic transplant appear side by side as layered dependency pyramids.
 - Each profile header shows only System robustness and Breakdown pressure; Battlefield effect is shown once, as the outcome node at the pyramid summit.
 - Each node shows its live simulated value, accumulated boundary pressure, and a value meter.
 - `Run` advances both profiles at the same cadence. `Step` advances exactly one discrete simulation step. `Reset` restores the seed model.
 - Selecting a node opens a modal editor above the comparison. Changes remain a draft until `Save changes`; `Cancel`, the close control, and clicking the backdrop discard the draft.
+- `Dependencies` expands the same modal without losing the node draft. It groups incoming and outgoing relationships, lets the user edit or disable a relationship, and supports adding or removing a relationship.
+- Relationship saves are validated: endpoints must exist, self-links and duplicate source-target pairs are rejected, ratio parts must be positive, and delay must be a non-negative integer.
+- `?` controls beside editable values show brief contextual help. The help closes on pointer exit, when another help is opened, or after a few seconds.
 - Saved profile values and model definitions persist locally through browser `localStorage`. `Export` downloads the persistent model data as JSON.
 
-The current UI intentionally does not expose free-form relation creation yet. Existing relationships remain part of the model engine and will be surfaced through the next connection-editor iteration.
+Relationships can be created and edited within a node's modal. The comparison pyramid remains deliberately fixed as a readable presentation layer; adding a relationship changes simulation behavior but does not dynamically redraw a freeform network.
+
+## Reading the screen
+
+All values are model values on a $0$ to $100$ scale unless stated otherwise. They are assumptions for exploration, not measurements or historical probabilities.
+
+| UI item | Meaning |
+| --- | --- |
+| `System robustness` | A bottleneck-aware aggregate of replacement capacity, feed and movement, husbandry, and political access. A higher value means the model has more capacity to keep elephants available and sustained. Handler, training, doctrine, and enemy-adaptation effects feed the separate battlefield calculation. |
+| `Breakdown pressure` | The inverse of aggregate battlefield effect: $100 - \text{battlefield effect}$. It is a compact warning signal, not an independent causal variable. Higher means greater system fragility in the current model state. |
+| Node value | The current live value for that subsystem in the profile. Higher is normally better, except for nodes such as Enemy adaptation, where a higher value represents a stronger opposing constraint. |
+| `Pressure` | Boundary pressure accumulated by a node relative to its threshold. At $100\%$, the node has reached or exceeded its threshold and can release stress into the rest of the simulation. |
+| Node meter | A visual restatement of the current node value, not of pressure. Its color distinguishes the two profiles. |
+| `Step` | Advances both profiles by one discrete simulation step under the selected scenario and stress. |
+| `Run` | Repeats simulation steps until paused. |
+
+For an editable node, the modal fields mean:
+
+- **Starting value**: the node value restored on reset for the selected profile.
+- **Threshold**: pressure at which the node begins to release stress.
+- **Buffer capacity / absorption / dissipation / recovery**: respectively, how much pressure can be held, taken in, naturally lost, and restored per step.
+- **Vulnerability / release fraction**: how strongly threshold release changes the node, and how much excess pressure is released.
+- **Polarity**: direct moves a target with the source; inverse moves it in the opposite direction.
+- **Strength / medium availability**: relationship multipliers. Availability at $0$ blocks that relationship.
+- **Curve / activation threshold / ratio / delay**: shape, activation condition, explicit source-to-target scale, and the modelled relationship timing assumption.
 
 ## How the dependency model works
 
@@ -156,12 +184,11 @@ Both are deliberately editable. The initial values are illustrative hypotheses r
 
 ## Suggestions for the next iteration
 
-1. Add an explicit relation editor to the modal: list incoming and outgoing relations, then support adding or removing a connection with validation against duplicate edges.
-2. Make relation delay operational in the simulation queue; the model schema already has `delaySteps`, while the current UI-focused simulation uses immediate step propagation.
-3. Add a scenario timeline or event log so users can explain why a node reached its pressure threshold.
-4. Add source and evidence editing, with citations visible at node and relation level.
-5. Add focused UI tests for the draft editor: save, cancel, local persistence, and reset behavior.
-6. Add an import action with schema validation to complement the existing JSON export.
+1. Make relation delay operational in the simulation queue; the model schema and editor expose `delaySteps`, while the current UI-focused simulation uses immediate step propagation.
+2. Add a scenario timeline or event log so users can explain why a node reached its pressure threshold.
+3. Add source and evidence editing, with citations visible at node and relation level.
+4. Add focused UI tests for node and relation drafts: save, cancel, duplicate validation, local persistence, and reset behavior.
+5. Add an import action with schema validation to complement the existing JSON export.
 
 ## How to add evidence and sources
 
@@ -174,7 +201,8 @@ Each node and relationship has a sources array. It is intentionally easy to add 
 - The graph simplifies highly complex political, ecological, and military systems.
 - The seed data is intentionally provisional and editable.
 - Relationship strength and evidence confidence are illustrative rather than academically exhaustive.
-- Free-form node wiring and relation editing are planned but are not exposed in the current interface.
+- Relation delay is editable but is not yet delivered through a delayed-signal queue in the UI simulation loop.
+- New relationships affect the simulation but are not automatically drawn as new lines in the fixed pyramid presentation.
 
 ## Future research questions
 

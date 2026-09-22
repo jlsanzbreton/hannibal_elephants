@@ -33,6 +33,10 @@ function App() {
   const [selectedProfileId, setSelectedProfileId] = useState('indian-source-ecosystem')
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [nodeDraft, setNodeDraft] = useState<SystemNode | null>(null)
+  const [relationDrafts, setRelationDrafts] = useState<InfluenceRelation[]>([])
+  const [showDependencies, setShowDependencies] = useState(false)
+  const [activeRelationId, setActiveRelationId] = useState<string | null>(null)
+  const [helpKey, setHelpKey] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
@@ -54,6 +58,12 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), nodes: model.nodes, relations: model.relations, profiles: model.profiles, scenarios: model.scenarios } satisfies ExportedModel))
   }, [model.nodes, model.relations, model.profiles, model.scenarios])
+
+  useEffect(() => {
+    if (!helpKey) return undefined
+    const timer = window.setTimeout(() => setHelpKey(null), 4500)
+    return () => window.clearTimeout(timer)
+  }, [helpKey])
 
   const runSimulationStep = () => {
     const scenario = getStressScenarioById(model.scenarios, model.selectedScenarioId)
@@ -77,6 +87,11 @@ function App() {
 
   const saveNodeDraft = () => {
     if (!nodeDraft || !selectedNode) return
+    const relationError = validateRelations(relationDrafts, model.nodes)
+    if (relationError) {
+      setErrorMessage(relationError)
+      return
+    }
     setSimulations((current) => ({
       ...current,
       [selectedProfileId]: current[selectedProfileId].map((node) => node.id === nodeDraft.id ? { ...nodeDraft, currentValue: nodeDraft.baselineValue } : node),
@@ -85,14 +100,60 @@ function App() {
       ...current,
       nodes: current.nodes.map((node) => node.id === nodeDraft.id ? { ...node, ...nodeDraft, baselineValue: node.baselineValue, currentValue: node.currentValue, boundaryEnergy: node.boundaryEnergy, bufferRemaining: node.bufferRemaining } : node),
       profiles: current.profiles.map((profile) => profile.id === selectedProfileId ? { ...profile, nodeValues: { ...profile.nodeValues, [nodeDraft.id]: nodeDraft.baselineValue } } : profile),
+      relations: relationDrafts,
     }))
+    setErrorMessage('')
     setNodeDraft(null)
+    setShowDependencies(false)
+    setActiveRelationId(null)
   }
 
   const openNodeEditor = (profileId: string, node: SystemNode) => {
     setSelectedProfileId(profileId)
     setSelectedNodeId(node.id)
     setNodeDraft({ ...node })
+    setRelationDrafts(model.relations.map((relation) => ({ ...relation })))
+    setShowDependencies(false)
+    setActiveRelationId(null)
+  }
+
+  const updateRelationDraft = (relationId: string, field: keyof InfluenceRelation, value: string | number | boolean) => {
+    setRelationDrafts((current) => current.map((relation) => relation.id === relationId ? { ...relation, [field]: value } : relation))
+  }
+
+  const addRelationDraft = () => {
+    if (!nodeDraft) return
+    const target = model.nodes.find((node) => node.id !== nodeDraft.id)
+    if (!target) return
+    const relation: InfluenceRelation = {
+      id: `relation-${Date.now()}`,
+      source: nodeDraft.id,
+      target: target.id,
+      polarity: 'direct',
+      curve: 'linear',
+      sourcePart: 1,
+      targetPart: 1,
+      strength: 0.5,
+      mediumAvailability: 1,
+      delaySteps: 0,
+      activationThreshold: 0,
+      mediumName: 'User-defined medium',
+      mediumDescription: 'Connection added in the dependency editor.',
+      rationale: 'User-defined exploratory relationship.',
+      evidenceConfidence: 0,
+      evidenceStatus: 'assumption',
+      sources: [],
+      enabled: true,
+    }
+    setRelationDrafts((current) => [...current, relation])
+    setActiveRelationId(relation.id)
+  }
+
+  const closeEditor = () => {
+    setNodeDraft(null)
+    setShowDependencies(false)
+    setActiveRelationId(null)
+    setHelpKey(null)
   }
 
   const resetAll = () => {
@@ -143,7 +204,7 @@ function App() {
         </section>
       })}
     </main>
-    {nodeDraft && selectedNode && <div className="modal-backdrop" role="presentation" onMouseDown={() => setNodeDraft(null)}><section className="node-modal" role="dialog" aria-modal="true" aria-labelledby="node-editor-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="Close editor" onClick={() => setNodeDraft(null)}>×</button><div className="inspector-kicker">{selectedProfileId} / {nodeDraft.category}</div><h3 id="node-editor-title">{nodeDraft.label}</h3><p>{nodeDraft.detailedMeaning}</p><div className="field-grid"><NumberField label="Starting value" value={nodeDraft.baselineValue} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, baselineValue: value } : draft)} /><NumberField label="Threshold" value={nodeDraft.energyThreshold} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, energyThreshold: value } : draft)} /><NumberField label="Buffer capacity" value={nodeDraft.bufferCapacity} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, bufferCapacity: value } : draft)} /><NumberField label="Absorption" step="0.01" value={nodeDraft.absorptionRate} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, absorptionRate: value } : draft)} /><NumberField label="Dissipation" step="0.01" value={nodeDraft.dissipationRate} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, dissipationRate: value } : draft)} /><NumberField label="Recovery" step="0.01" value={nodeDraft.recoveryRate} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, recoveryRate: value } : draft)} /><NumberField label="Vulnerability" step="0.01" value={nodeDraft.vulnerability} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, vulnerability: value } : draft)} /><NumberField label="Release fraction" step="0.01" value={nodeDraft.releaseFraction} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, releaseFraction: value } : draft)} /></div><div className="modal-actions"><button type="button" onClick={() => setNodeDraft(null)}>Cancel</button><button type="button" className="save-button" onClick={saveNodeDraft}>Save changes</button></div></section></div>}
+    {nodeDraft && selectedNode && <div className="modal-backdrop" role="presentation" onMouseDown={closeEditor}><section className={`node-modal ${showDependencies ? 'dependencies-open' : ''}`} role="dialog" aria-modal="true" aria-labelledby="node-editor-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="Close editor" onClick={closeEditor}>×</button><div className="inspector-kicker">{selectedProfileId} / {nodeDraft.category}</div><h3 id="node-editor-title">{nodeDraft.label}</h3><p>{nodeDraft.detailedMeaning}</p><div className="field-grid"><NumberField label="Starting value" help="The value used when this profile is reset or first loaded." helpKey="baselineValue" activeHelp={helpKey} onHelp={setHelpKey} value={nodeDraft.baselineValue} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, baselineValue: value } : draft)} /><NumberField label="Threshold" help="Pressure level at which this node begins to release accumulated stress." helpKey="energyThreshold" activeHelp={helpKey} onHelp={setHelpKey} value={nodeDraft.energyThreshold} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, energyThreshold: value } : draft)} /><NumberField label="Buffer capacity" help="Maximum pressure this node can absorb before it reaches the boundary." helpKey="bufferCapacity" activeHelp={helpKey} onHelp={setHelpKey} value={nodeDraft.bufferCapacity} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, bufferCapacity: value } : draft)} /><NumberField label="Absorption" help="Share of incoming pressure taken up by the remaining buffer at each step." helpKey="absorptionRate" activeHelp={helpKey} onHelp={setHelpKey} step="0.01" value={nodeDraft.absorptionRate} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, absorptionRate: value } : draft)} /><NumberField label="Dissipation" help="Pressure that naturally leaves the node at each simulation step." helpKey="dissipationRate" activeHelp={helpKey} onHelp={setHelpKey} step="0.01" value={nodeDraft.dissipationRate} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, dissipationRate: value } : draft)} /><NumberField label="Recovery" help="Buffer capacity restored at each simulation step." helpKey="recoveryRate" activeHelp={helpKey} onHelp={setHelpKey} step="0.01" value={nodeDraft.recoveryRate} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, recoveryRate: value } : draft)} /><NumberField label="Vulnerability" help="How strongly released pressure changes the node's live value." helpKey="vulnerability" activeHelp={helpKey} onHelp={setHelpKey} step="0.01" value={nodeDraft.vulnerability} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, vulnerability: value } : draft)} /><NumberField label="Release fraction" help="Share of pressure above the threshold released into the simulation." helpKey="releaseFraction" activeHelp={helpKey} onHelp={setHelpKey} step="0.01" value={nodeDraft.releaseFraction} onChange={(value) => setNodeDraft((draft) => draft ? { ...draft, releaseFraction: value } : draft)} /></div><div className="modal-actions"><button type="button" className={showDependencies ? 'active' : ''} onClick={() => setShowDependencies((current) => !current)}>Dependencies</button><button type="button" onClick={closeEditor}>Cancel</button><button type="button" className="save-button" onClick={saveNodeDraft}>Save changes</button></div>{showDependencies && <DependencyEditor node={nodeDraft} nodes={model.nodes} relations={relationDrafts} activeRelationId={activeRelationId} onSelect={setActiveRelationId} onUpdate={updateRelationDraft} onAdd={addRelationDraft} onRemove={(relationId) => { setRelationDrafts((current) => current.filter((relation) => relation.id !== relationId)); setActiveRelationId(null) }} helpKey={helpKey} onHelp={setHelpKey} />}</section></div>}
     <div className="model-note">Illustrative hypothesis model — values are editable assumptions, not measured historical probabilities.</div>
     {errorMessage && <div className="error-banner">{errorMessage}</div>}
   </div>
@@ -154,7 +215,34 @@ function NodeBox({ node, active, onClick }: { node: SystemNode; active: boolean;
   const pressure = Math.min(100, (node.boundaryEnergy / Math.max(node.energyThreshold, 1)) * 100)
   return <button type="button" className={`node-box ${active ? 'selected' : ''} ${pressure >= 100 ? 'under-pressure' : ''}`} onClick={onClick}><span>{node.label}</span><strong>{node.currentValue.toFixed(0)}<small>/100</small></strong><span className="node-pressure">pressure {pressure.toFixed(0)}%</span><span className="node-meter"><i style={{ width: `${Math.min(node.currentValue, 100)}%` }} /></span></button>
 }
-function NumberField({ label, value, step = '1', onChange }: { label: string; value: number; step?: string; onChange: (value: number) => void }) { return <label>{label}<input type="number" step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label> }
+function NumberField({ label, value, step = '1', onChange, help, helpKey, activeHelp, onHelp }: { label: string; value: number; step?: string; onChange: (value: number) => void; help?: string; helpKey?: string; activeHelp?: string | null; onHelp?: (key: string | null) => void }) { return <label><span className="field-label">{label}{help && helpKey && onHelp && <button type="button" className="help-button" aria-label={`Explain ${label}`} onClick={() => onHelp(activeHelp === helpKey ? null : helpKey)}>?</button>}{help && helpKey === activeHelp && <span className="help-popover" onMouseLeave={() => onHelp?.(null)}>{help}</span>}</span><input type="number" step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label> }
+
+function DependencyEditor({ node, nodes, relations, activeRelationId, onSelect, onUpdate, onAdd, onRemove, helpKey, onHelp }: { node: SystemNode; nodes: SystemNode[]; relations: InfluenceRelation[]; activeRelationId: string | null; onSelect: (id: string | null) => void; onUpdate: (id: string, field: keyof InfluenceRelation, value: string | number | boolean) => void; onAdd: () => void; onRemove: (id: string) => void; helpKey: string | null; onHelp: (key: string | null) => void }) {
+  const related = relations.filter((relation) => relation.source === node.id || relation.target === node.id)
+  const incoming = related.filter((relation) => relation.target === node.id)
+  const outgoing = related.filter((relation) => relation.source === node.id)
+  const active = relations.find((relation) => relation.id === activeRelationId) ?? null
+  return <div className="dependency-editor"><div className="dependency-heading"><div><div className="inspector-kicker">Dependency editor</div><h4>Incoming and outgoing influences</h4></div><button type="button" onClick={onAdd}>Add dependency</button></div><div className="dependency-columns"><DependencyList title="Incoming" nodeId={node.id} relations={incoming} nodes={nodes} selectedId={activeRelationId} onSelect={onSelect} /><DependencyList title="Outgoing" nodeId={node.id} relations={outgoing} nodes={nodes} selectedId={activeRelationId} onSelect={onSelect} /></div>{active && <div className="relation-draft"><div className="relation-draft-heading"><h4>{active.source} → {active.target}</h4><button type="button" className="danger-action" onClick={() => onRemove(active.id)}>Remove</button></div><div className="field-grid relation-fields"><SelectField label="Source" value={active.source} options={nodes.map((item) => item.id)} onChange={(value) => onUpdate(active.id, 'source', value)} /><SelectField label="Target" value={active.target} options={nodes.map((item) => item.id)} onChange={(value) => onUpdate(active.id, 'target', value)} /><SelectField label="Polarity" value={active.polarity} options={['direct', 'inverse', 'nonlinear']} onChange={(value) => onUpdate(active.id, 'polarity', value)} /><SelectField label="Curve" value={active.curve} options={['linear', 'saturating', 'threshold']} onChange={(value) => onUpdate(active.id, 'curve', value)} /><NumberField label="Strength" help="Multiplier for the relationship before curve and availability effects." helpKey={`strength-${active.id}`} activeHelp={helpKey} onHelp={onHelp} step="0.01" value={active.strength} onChange={(value) => onUpdate(active.id, 'strength', value)} /><NumberField label="Medium availability" help="A value of zero blocks this pathway completely; one means fully available." helpKey={`medium-${active.id}`} activeHelp={helpKey} onHelp={onHelp} step="0.01" value={active.mediumAvailability} onChange={(value) => onUpdate(active.id, 'mediumAvailability', value)} /><NumberField label="Delay steps" help="Whole simulation steps before this relationship takes effect." helpKey={`delay-${active.id}`} activeHelp={helpKey} onHelp={onHelp} value={active.delaySteps} onChange={(value) => onUpdate(active.id, 'delaySteps', value)} /><NumberField label="Activation threshold" help="Source value required before this relationship transmits." helpKey={`activation-${active.id}`} activeHelp={helpKey} onHelp={onHelp} value={active.activationThreshold} onChange={(value) => onUpdate(active.id, 'activationThreshold', value)} /><NumberField label="Ratio source" help="First half of the explicit source:target relationship ratio." helpKey={`source-ratio-${active.id}`} activeHelp={helpKey} onHelp={onHelp} value={active.sourcePart} onChange={(value) => onUpdate(active.id, 'sourcePart', value)} /><NumberField label="Ratio target" help="Second half of the explicit source:target relationship ratio." helpKey={`target-ratio-${active.id}`} activeHelp={helpKey} onHelp={onHelp} value={active.targetPart} onChange={(value) => onUpdate(active.id, 'targetPart', value)} /></div><label className="enabled-toggle"><input type="checkbox" checked={active.enabled} onChange={(event) => onUpdate(active.id, 'enabled', event.target.checked)} /> Enabled in simulation</label></div>}</div>
+}
+
+function DependencyList({ title, nodeId, relations, nodes, selectedId, onSelect }: { title: string; nodeId: string; relations: InfluenceRelation[]; nodes: SystemNode[]; selectedId: string | null; onSelect: (id: string) => void }) { return <div className="dependency-list"><h5>{title}</h5>{relations.length === 0 ? <p>No relations.</p> : relations.map((relation) => { const other = relation.source === nodeId ? relation.target : relation.source; const label = nodes.find((node) => node.id === other)?.label ?? other; return <button className={selectedId === relation.id ? 'active' : ''} type="button" key={relation.id} onClick={() => onSelect(relation.id)}><span>{label}</span><small>{relation.polarity} · {relation.strength.toFixed(2)}</small></button> })}</div> }
+
+function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label><span className="field-label">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label> }
+
+function validateRelations(relations: InfluenceRelation[], nodes: SystemNode[]): string | null {
+  const nodeIds = new Set(nodes.map((node) => node.id))
+  const pairs = new Set<string>()
+  for (const relation of relations) {
+    if (!nodeIds.has(relation.source) || !nodeIds.has(relation.target)) return 'Each dependency must reference an existing node.'
+    if (relation.source === relation.target) return 'A dependency cannot connect a node to itself.'
+    if (relation.sourcePart <= 0 || relation.targetPart <= 0) return 'Dependency ratio parts must be positive.'
+    if (relation.delaySteps < 0 || !Number.isInteger(relation.delaySteps)) return 'Dependency delay must be a whole number of steps.'
+    const pair = `${relation.source}:${relation.target}`
+    if (pairs.has(pair)) return 'Only one dependency is allowed for the same source and target pair.'
+    pairs.add(pair)
+  }
+  return null
+}
 
 function advanceNodes(nodes: SystemNode[], relations: InfluenceRelation[], pressureByNode: Record<string, number>, stressIntensity: number): SystemNode[] {
   const stressedNodes = nodes.map((node) => {
