@@ -37,6 +37,8 @@ button:hover, button.active { background: rgba(214, 183, 122, 0.13); border-colo
 .secondary-action { color: var(--muted); }
 .workspace-label { margin: 9px 0 10px; color: var(--text); font-size: 0.78rem; }
 .workspace-label span { color: var(--muted); }
+.error-shell { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; justify-content: center; color: var(--text); }
+.error-shell p { color: var(--muted); }
 
 .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(310px, 1fr)); gap: 14px; }
 .profile-card { padding: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 9px; }

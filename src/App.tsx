@@ -56,7 +56,12 @@ function App() {
   }, [])
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), nodes: model.nodes, relations: model.relations, profiles: model.profiles, scenarios: model.scenarios } satisfies ExportedModel))
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), nodes: model.nodes, relations: model.relations, profiles: model.profiles, scenarios: model.scenarios } satisfies ExportedModel))
+    } catch {
+      // Storage quota exceeded or unavailable (e.g. Safari private mode) — app keeps working without autosave.
+      setErrorMessage('Could not autosave to local storage. Your changes will not persist after closing this tab.')
+    }
   }, [model.nodes, model.relations, model.profiles, model.scenarios])
 
   useEffect(() => {
