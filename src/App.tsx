@@ -196,8 +196,10 @@ function App() {
       {model.profiles.map((profile, index) => {
         const nodes = simulations[profile.id] ?? model.nodes
         const metrics = profileMetrics[profile.id]
+        const otherProfile = model.profiles.find((entry) => entry.id !== profile.id)
+        const otherMetrics = otherProfile ? profileMetrics[otherProfile.id] : undefined
         return <section key={profile.id} className={`profile-card ${index === 0 ? 'source' : 'transplant'}`}>
-          <div className="profile-header"><h2>{profile.name}</h2><div className="score-row"><Score label="System robustness" value={metrics.availability} /><Score label="Breakdown pressure" value={100 - metrics.battlefield} /></div></div>
+          <div className="profile-header"><h2>{profile.name}</h2><div className="score-row"><Score label="System robustness" kind="robustness" value={metrics.availability} otherValue={otherMetrics?.availability} /><Score label="Breakdown pressure" kind="pressure" value={100 - metrics.battlefield} otherValue={otherMetrics ? 100 - otherMetrics.battlefield : undefined} /></div></div>
           <div className="pyramid" aria-label={`${profile.name} system pyramid`}>
             {pyramidLayers.map((layer, layerIndex) => <div className={`pyramid-layer layer-${layerIndex + 1}`} key={`layer-${layerIndex}`}>
               {layer.map((nodeId) => {
@@ -215,7 +217,19 @@ function App() {
   </div>
 }
 
-function Score({ label, value }: { label: string; value: number }) { return <div className="score-box"><div className="score-label">{label}</div><div className="score-value">{value.toFixed(0)}/100</div></div> }
+function Score({ label, value, kind, otherValue }: { label: string; value: number; kind: 'robustness' | 'pressure'; otherValue?: number }) {
+  const severity = getScoreSeverity(kind, value)
+  const comparison = otherValue === undefined || Math.round(value) === Math.round(otherValue) ? null : (kind === 'robustness' ? value > otherValue : value < otherValue) ? 'better' : 'worse'
+  return <div className={`score-box ${severity}`}>
+    <div className="score-label"><span className={`score-dot ${severity}`} />{label}{comparison && <span className={`score-arrow ${comparison}`}>{comparison === 'better' ? '▲' : '▼'}</span>}</div>
+    <div className="score-value">{value.toFixed(0)}<small>/100</small></div>
+    <div className="score-bar"><i className={severity} style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }} /></div>
+  </div>
+}
+function getScoreSeverity(kind: 'robustness' | 'pressure', value: number): 'safe' | 'warn' | 'danger' {
+  if (kind === 'robustness') return value >= 70 ? 'safe' : value >= 40 ? 'warn' : 'danger'
+  return value < 30 ? 'safe' : value < 65 ? 'warn' : 'danger'
+}
 function NodeBox({ node, active, onClick }: { node: SystemNode; active: boolean; onClick: () => void }) {
   const pressure = Math.min(100, (node.boundaryEnergy / Math.max(node.energyThreshold, 1)) * 100)
   return <button type="button" className={`node-box ${active ? 'selected' : ''} ${pressure >= 100 ? 'under-pressure' : ''}`} onClick={onClick}><span>{node.label}</span><strong>{node.currentValue.toFixed(0)}<small>/100</small></strong><span className="node-pressure">pressure {pressure.toFixed(0)}%</span><span className="node-meter"><i style={{ width: `${Math.min(node.currentValue, 100)}%` }} /></span></button>

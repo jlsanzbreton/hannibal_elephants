@@ -8,6 +8,7 @@
   --amber: #d6b77a;
   --blue: #61a2e2;
   --danger: #d89061;
+  --safe: #7fae6a;
   font-family: Inter, 'Segoe UI', sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -22,7 +23,7 @@ button, input, select { font: inherit; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .title-block { min-width: 250px; }
 .eyebrow, .inspector-kicker { color: var(--amber); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; }
-h1 { margin: 5px 0 0; font-size: clamp(2rem, 2.8vw, 3rem); line-height: 0.92; letter-spacing: -0.075em; }
+h1 { margin: 5px 0 0; font-size: clamp(2rem, 2.8vw, 3rem); line-height: 0.92; letter-spacing: -0.075em; color: var(--text); }
 .toolbar { display: flex; flex: 1; align-items: center; justify-content: flex-end; gap: 10px; max-width: 790px; }
 .select-row, .button-row { display: flex; align-items: center; gap: 8px; }
 .select-row { flex: 1; }
@@ -44,11 +45,28 @@ button:hover, button.active { background: rgba(214, 183, 122, 0.13); border-colo
 .profile-card { padding: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 9px; }
 .profile-card.source { border-color: rgba(97, 162, 226, 0.56); }
 .profile-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.profile-header h2 { max-width: 10ch; margin: 0; font-size: 1.55rem; line-height: 0.96; letter-spacing: -0.055em; }
+.profile-header h2 { max-width: 10ch; margin: 0; font-size: 1.55rem; line-height: 0.96; letter-spacing: -0.055em; color: var(--text); }
 .score-row { display: grid; grid-template-columns: repeat(2, minmax(92px, 1fr)); gap: 7px; }
-.score-box { min-height: 53px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 7px; background: rgba(255, 255, 255, 0.018); }
-.score-label { color: var(--muted); font-size: 0.58rem; line-height: 1.2; letter-spacing: 0.075em; text-transform: uppercase; }
-.score-value { margin-top: 5px; font-size: 0.91rem; font-weight: 700; }
+.score-box { min-height: 53px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 7px; background: rgba(255, 255, 255, 0.018); transition: border-color 0.2s, background-color 0.2s; }
+.score-box.safe { border-color: rgba(127, 174, 106, 0.5); background: rgba(127, 174, 106, 0.08); }
+.score-box.warn { border-color: rgba(214, 183, 122, 0.55); background: rgba(214, 183, 122, 0.08); }
+.score-box.danger { border-color: rgba(216, 144, 97, 0.6); background: rgba(216, 144, 97, 0.1); animation: score-pulse 1.6s ease-in-out infinite; }
+.score-label { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 0.58rem; line-height: 1.2; letter-spacing: 0.075em; text-transform: uppercase; }
+.score-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; }
+.score-dot.safe { background: var(--safe); }
+.score-dot.warn { background: var(--amber); }
+.score-dot.danger { background: var(--danger); }
+.score-arrow { margin-left: auto; font-size: 0.62rem; }
+.score-arrow.better { color: var(--safe); }
+.score-arrow.worse { color: var(--danger); }
+.score-value { display: flex; align-items: baseline; gap: 2px; margin: 4px 0 5px; font-size: 1.35rem; font-weight: 700; line-height: 1; }
+.score-value small { font-size: 0.56rem; font-weight: 400; color: var(--muted); }
+.score-bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.score-bar i { display: block; height: 100%; border-radius: 2px; }
+.score-bar i.safe { background: var(--safe); }
+.score-bar i.warn { background: var(--amber); }
+.score-bar i.danger { background: var(--danger); }
+@keyframes score-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(216, 144, 97, 0); } 50% { box-shadow: 0 0 0 3px rgba(216, 144, 97, 0.25); } }
 
 .pyramid { position: relative; display: flex; flex-direction: column-reverse; gap: 8px; padding: 11px 0 1px; }
 .pyramid::before { position: absolute; inset: 13px 8% 5px; z-index: 0; content: ''; border-left: 1px solid rgba(213, 184, 128, 0.18); border-right: 1px solid rgba(213, 184, 128, 0.18); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
